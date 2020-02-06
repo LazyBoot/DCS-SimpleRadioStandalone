@@ -10,25 +10,33 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NLog;
+using Caliburn.Micro;
+using System.Net.Http;
+using System.IO;
+using System.Reflection;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 {
-    public class SRSClientSession: TcpSession
+    public class SRSClientSession : TcpSession
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
+        private static readonly HttpClient HttpClient = new HttpClient();
 
         private readonly ConcurrentDictionary<string, SRClient> _clients;
         private readonly HashSet<IPAddress> _bannedIps;
+        private readonly IEventAggregator _eventAggregator;
 
         // Received data string.
         private readonly StringBuilder _receiveBuffer = new StringBuilder();
 
         public string SRSGuid { get; set; }
 
-        public SRSClientSession(ServerSync server, ConcurrentDictionary<string, SRClient> client, HashSet<IPAddress> bannedIps) : base(server)
+        public SRSClientSession(ServerSync server, ConcurrentDictionary<string, SRClient> client, HashSet<IPAddress> bannedIps, IEventAggregator eventAggregator) : base(server)
         {
             _clients = client;
             _bannedIps = bannedIps;
+            _eventAggregator = eventAggregator;
         }
 
         protected override void OnConnected()
@@ -41,6 +49,45 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
                 Logger.Warn("Disconnecting Banned Client -  " + clientIp.Address + " " + clientIp.Port);
                 return;
+            }
+
+            var whiteListFile = Path.Combine(GetCurrentDirectory(), @"client-whitelist.txt");
+            var whiteList = File.ReadAllLines(whiteListFile);
+            if (whiteList.Contains(clientIp.Address.ToString()))
+                return;
+
+            switch (CheckVpn(clientIp.Address))
+            {
+                case VpnBlockResult.Safe:
+                    File.AppendAllText(whiteListFile, clientIp.Address.ToString() + Environment.NewLine);
+                    break;
+                case VpnBlockResult.Block:
+                    var client = new SRClient { ClientSession = this };
+                    _eventAggregator.PublishOnUIThread(new BanClientMessage(client));
+                    break;
+                case VpnBlockResult.Warning:
+                    break;
+            }
+        }
+
+        private VpnBlockResult CheckVpn(IPAddress ipAddress)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "http://v2.api.iphub.info/ip/" + ipAddress)
+            {
+                Headers = { { "X-Key", Environment.GetEnvironmentVariable("VPNCHECKKEY", EnvironmentVariableTarget.Machine) } }
+            };
+
+            using (var response = HttpClient.SendAsync(request).GetAwaiter().GetResult())
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.Warn($"Unable to get VPN info. Status: {response.StatusCode}, key length: {Environment.GetEnvironmentVariable("VPNCHECKKEY", EnvironmentVariableTarget.Machine).Length}");
+                    return VpnBlockResult.Warning;
+                }
+
+                var vpnResult = JsonConvert.DeserializeObject<VpnResult>(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+
+                return (VpnBlockResult)vpnResult.block;
             }
         }
 
@@ -72,7 +119,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex,$"Unable to process JSON: \n {message}");
+                    Logger.Error(ex, $"Unable to process JSON: \n {message}");
                 }
 
 
@@ -85,7 +132,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
         protected override void OnReceived(byte[] buffer, long offset, long size)
         {
-            _receiveBuffer.Append(Encoding.UTF8.GetString(buffer, (int) offset, (int) size));
+            _receiveBuffer.Append(Encoding.UTF8.GetString(buffer, (int)offset, (int)size));
 
             foreach (var s in GetNetworkMessage())
             {
@@ -96,13 +143,48 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
         protected override void OnError(SocketError error)
         {
-            Logger.Error( $"Socket Error: {error}");
+            Logger.Error($"Socket Error: {error}");
         }
 
         protected override void OnException(Exception error)
         {
-            Logger.Error(error,$"Socket Exception: {error}");
+            Logger.Error(error, $"Socket Exception: {error}");
             Disconnect();
         }
+
+        private static string GetCurrentDirectory()
+        {
+            //To get the location the assembly normally resides on disk or the install directory
+            var currentPath = Assembly.GetExecutingAssembly().CodeBase;
+
+            //once you have the path you get the directory with:
+            var currentDirectory = Path.GetDirectoryName(currentPath);
+
+            if (currentDirectory.StartsWith("file:\\"))
+            {
+                currentDirectory = currentDirectory.Replace("file:\\", "");
+            }
+
+            return currentDirectory;
+        }
+
     }
+
+    public enum VpnBlockResult
+    {
+        Safe = 0,
+        Block = 1,
+        Warning = 2
+    }
+
+    public class VpnResult
+    {
+        public string ip { get; set; }
+        public string countryCode { get; set; }
+        public string countryName { get; set; }
+        public int asn { get; set; }
+        public string isp { get; set; }
+        public int block { get; set; }
+    }
+
 }

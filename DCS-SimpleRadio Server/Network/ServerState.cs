@@ -179,6 +179,9 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
                 PopulateBanList();
 
+                if (!File.Exists(Path.Combine(GetCurrentDirectory(), @"client-whitelist.txt")))
+                    File.Create(Path.Combine(GetCurrentDirectory(), @"client-whitelist.txt"));
+
                 _serverListener = new UDPVoiceRouter(_connectedClients, _eventAggregator);
                 var listenerThread = new Thread(_serverListener.Listen);
                 listenerThread.Start();

@@ -77,7 +77,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
             }
         }
 
-        protected override TcpSession CreateSession() { return new SRSClientSession(this,_clients,_bannedIps); }
+        protected override TcpSession CreateSession() { return new SRSClientSession(this,_clients,_bannedIps, _eventAggregator); }
 
         protected override void OnError(SocketError error)
         {
