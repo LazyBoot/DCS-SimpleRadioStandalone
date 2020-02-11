@@ -27,6 +27,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Common
 
         public static async void CheckForUpdate(bool checkForBetaUpdates)
         {
+            return;
             Version currentVersion = Version.Parse(VERSION);
 
 #if DEBUG
