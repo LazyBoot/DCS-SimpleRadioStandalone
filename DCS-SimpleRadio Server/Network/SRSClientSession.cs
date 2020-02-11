@@ -66,6 +66,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
                     _eventAggregator.PublishOnUIThread(new BanClientMessage(client));
                     break;
                 case VpnBlockResult.Warning:
+                    Disconnect();
                     break;
             }
         }
