@@ -48,7 +48,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
         {
             WriteBanIP(message.Client);
 
-            KickClient(message.Client);
+            //KickClient(message.Client);
         }
 
         public void Handle(KickClientMessage message)
