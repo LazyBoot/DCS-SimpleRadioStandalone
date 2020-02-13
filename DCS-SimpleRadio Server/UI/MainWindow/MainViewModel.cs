@@ -194,6 +194,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.UI.MainWindow
 
         public string LotATCExportText
             => ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.LOTATC_EXPORT_ENABLED).BoolValue ? "ON" : "OFF";
+        public string BlockWarnIpsText
+            => ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.BLOCK_WARN_IPS).BoolValue ? "ON" : "OFF";
         public string ListeningPort
             => ServerSettingsStore.Instance.GetServerSetting(ServerSettingsKeys.SERVER_PORT).StringValue;
 
@@ -383,6 +385,15 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.UI.MainWindow
             var newSetting = LotATCExportText != "ON";
             ServerSettingsStore.Instance.SetGeneralSetting(ServerSettingsKeys.LOTATC_EXPORT_ENABLED, newSetting);
             NotifyOfPropertyChange(() => LotATCExportText);
+
+            _eventAggregator.PublishOnBackgroundThread(new ServerSettingsChangedMessage());
+        }
+
+        public void BlockWarnIpsToggle()
+        {
+            var newSetting = BlockWarnIpsText != "ON";
+            ServerSettingsStore.Instance.SetGeneralSetting(ServerSettingsKeys.BLOCK_WARN_IPS, newSetting);
+            NotifyOfPropertyChange(() => BlockWarnIpsText);
 
             _eventAggregator.PublishOnBackgroundThread(new ServerSettingsChangedMessage());
         }

@@ -14,6 +14,8 @@ using Caliburn.Micro;
 using System.Net.Http;
 using System.IO;
 using System.Reflection;
+using Ciribob.DCS.SimpleRadio.Standalone.Server.Settings;
+using Ciribob.DCS.SimpleRadio.Standalone.Common.Setting;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 {
@@ -64,9 +66,17 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
                 case VpnBlockResult.Block:
                     var client = new SRClient { ClientSession = this };
                     _eventAggregator.PublishOnUIThread(new BanClientMessage(client));
+                    Disconnect();
+                    Logger.Warn("Disconnecting + banning VPN Client -  " + clientIp.Address + " " + clientIp.Port);
                     break;
                 case VpnBlockResult.Warning:
+                    if (!ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.BLOCK_WARN_IPS).BoolValue)
+                        break;
+
                     Disconnect();
+                    Logger.Warn("Disconnecting possible VPN Client -  " + clientIp.Address + " " + clientIp.Port);
+                    break;
+                case VpnBlockResult.Error:
                     break;
             }
         }
@@ -78,17 +88,25 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
                 Headers = { { "X-Key", Environment.GetEnvironmentVariable("VPNCHECKKEY", EnvironmentVariableTarget.Machine) } }
             };
 
-            using (var response = HttpClient.SendAsync(request).GetAwaiter().GetResult())
+            try
             {
-                if (!response.IsSuccessStatusCode)
+                using (var response = HttpClient.SendAsync(request).GetAwaiter().GetResult())
                 {
-                    Logger.Warn($"Unable to get VPN info. Status: {response.StatusCode}, key length: {Environment.GetEnvironmentVariable("VPNCHECKKEY", EnvironmentVariableTarget.Machine).Length}");
-                    return VpnBlockResult.Warning;
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        Logger.Warn($"Unable to get VPN info. Status: {response.StatusCode}, key length: {Environment.GetEnvironmentVariable("VPNCHECKKEY", EnvironmentVariableTarget.Machine).Length}");
+                        return VpnBlockResult.Error;
+                    }
+
+                    var vpnResult = JsonConvert.DeserializeObject<VpnResult>(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
+
+                    return (VpnBlockResult)vpnResult.block;
                 }
-
-                var vpnResult = JsonConvert.DeserializeObject<VpnResult>(response.Content.ReadAsStringAsync().GetAwaiter().GetResult());
-
-                return (VpnBlockResult)vpnResult.block;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Unable to contact VPN checker API");
+                return VpnBlockResult.Error;
             }
         }
 
@@ -175,7 +193,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
     {
         Safe = 0,
         Block = 1,
-        Warning = 2
+        Warning = 2,
+        Error = 3
     }
 
     public class VpnResult
