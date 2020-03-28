@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -268,6 +270,35 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
                     _logger.Warn("Disconnecting Banned Client -  " + clientIp.Address + " " + clientIp.Port);
                     return;
+                }
+
+                var whiteListFile = Path.Combine(HoggitVpnChecker.GetCurrentDirectory(), @"client-whitelist.txt");
+                var whiteList = File.ReadAllLines(whiteListFile);
+                if (!whiteList.Contains(clientIp.Address.ToString()))
+                {
+                    switch (HoggitVpnChecker.CheckVpn(clientIp.Address))
+                    {
+                        case VpnBlockResult.Safe:
+                            File.AppendAllText(whiteListFile, clientIp.Address.ToString() + Environment.NewLine);
+                            break;
+                        case VpnBlockResult.Block:
+                            var client = new SRClient { ClientSocket = state.workSocket };
+                            _eventAggregator.PublishOnUIThread(new BanClientMessage(client));
+                            state.workSocket.Shutdown(SocketShutdown.Both);
+                            state.workSocket.Disconnect(true);
+                            _logger.Warn("Disconnecting + banning VPN Client -  " + clientIp.Address + " " + clientIp.Port);
+                            return;
+                        case VpnBlockResult.Warning:
+                            if (!ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.BLOCK_WARN_IPS).BoolValue)
+                                break;
+
+                            state.workSocket.Shutdown(SocketShutdown.Both);
+                            state.workSocket.Disconnect(true);
+                            _logger.Warn("Disconnecting possible VPN Client -  " + clientIp.Address + " " + clientIp.Port);
+                            return;
+                        case VpnBlockResult.Error:
+                            break;
+                    }
                 }
 
                 //  logger.Info("Received From " + clientIp.Address + " " + clientIp.Port);

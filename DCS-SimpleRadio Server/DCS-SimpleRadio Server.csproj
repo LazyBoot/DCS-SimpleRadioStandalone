@@ -224,6 +224,8 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Bootstrapper.cs" />
+    <Compile Include="Network\HoggitVpnChecker.cs" />
+    <Compile Include="Network\HoggitVpnModels.cs" />
     <Compile Include="Network\NetCoreServer\Buffer.cs" />
     <Compile Include="Network\OutgoingVoice.cs" />
     <Compile Include="Network\PendingPacket.cs" />
