@@ -68,6 +68,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
         public float SpeakerMax { get; set; } = -100;
 
         private ClientStateSingleton _clientStateSingleton = ClientStateSingleton.Instance;
+        private AudioInputSingleton _audioInputSingleton = AudioInputSingleton.Instance;
         private WasapiOut _micWaveOut;
         private BufferedWaveProvider _micWaveOutBuffer;
 
@@ -103,10 +104,9 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
         }
 
         public void StartEncoding(int mic, MMDevice speakers, string guid, InputDeviceManager inputManager,
-            IPAddress ipAddress, int port, MMDevice micOutput, VOIPConnectCallback voipConnectCallback)
+            IPAddress ipAddress, int port, MMDevice micOutput)
         {
             _stop = false;
-
 
             try
             {
@@ -224,8 +224,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
                 }
             }
 
-
-            if (_clientStateSingleton.MicrophoneAvailable)
+            if (_audioInputSingleton.MicrophoneAvailable)
             {
                 try
                 {
@@ -240,7 +239,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
                     _waveIn.WaveFormat = new WaveFormat(INPUT_SAMPLE_RATE, 16, 1);
 
                     _udpVoiceHandler =
-                        new UdpVoiceHandler(guid, ipAddress, port, _decoder, this, inputManager, voipConnectCallback);
+                        new UdpVoiceHandler(guid, ipAddress, port, _decoder, this, inputManager);
                     var voiceSenderThread = new Thread(_udpVoiceHandler.Listen);
 
                     voiceSenderThread.Start();
@@ -263,7 +262,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
             {
                 //no mic....
                 _udpVoiceHandler =
-                    new UdpVoiceHandler(guid, ipAddress, port, _decoder, this, inputManager, voipConnectCallback);
+                    new UdpVoiceHandler(guid, ipAddress, port, _decoder, this, inputManager);
                 MessageHub.Instance.Subscribe<SRClient>(RemoveClientBuffer);
                 var voiceSenderThread = new Thread(_udpVoiceHandler.Listen);
                 voiceSenderThread.Start();
@@ -346,76 +345,83 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
 
         public void PlaySoundEffectStartReceive(int transmitOnRadio, bool encrypted, float volume)
         {
-            if (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioRxEffects_Start))
+            if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioRxEffects_Start))
             {
-                var _effectsBuffer = _effectsOutputBuffer[transmitOnRadio];
+                return;
+            }
 
-                if (encrypted && (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioEncryptionEffects)))
-                {
-                    _effectsBuffer.VolumeSampleProvider.Volume = volume;
-                    _effectsBuffer.AddAudioSamples(
-                        _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.KY_58_RX].AudioEffectBytes,
-                        transmitOnRadio);
-                }
-                else
-                {
-                    _effectsBuffer.VolumeSampleProvider.Volume = volume;
-                    _effectsBuffer.AddAudioSamples(
-                        _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_TX].AudioEffectBytes,
-                        transmitOnRadio);
-                }
+            var _effectsBuffer = _effectsOutputBuffer[transmitOnRadio];
+
+            if (encrypted && (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioEncryptionEffects)))
+            {
+                _effectsBuffer.VolumeSampleProvider.Volume = volume;
+                _effectsBuffer.AddAudioSamples(
+                    _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.KY_58_RX].AudioEffectBytes,
+                    transmitOnRadio);
+            }
+            else
+            {
+                _effectsBuffer.VolumeSampleProvider.Volume = volume;
+                _effectsBuffer.AddAudioSamples(
+                    _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_TX].AudioEffectBytes,
+                    transmitOnRadio);
             }
         }
 
         public void PlaySoundEffectStartTransmit(int transmitOnRadio, bool encrypted, float volume)
         {
-            if (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioTxEffects_Start))
+            if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioTxEffects_Start))
             {
-                var _effectBuffer = _effectsOutputBuffer[transmitOnRadio];
+                return;
+            }
 
+            var _effectBuffer = _effectsOutputBuffer[transmitOnRadio];
 
-                if (encrypted && (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioEncryptionEffects)))
-                {
-                    _effectBuffer.VolumeSampleProvider.Volume = volume;
-                    _effectBuffer.AddAudioSamples(
-                        _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.KY_58_TX].AudioEffectBytes,
-                        transmitOnRadio);
-                }
-                else
-                {
-                    _effectBuffer.VolumeSampleProvider.Volume = volume;
-                    _effectBuffer.AddAudioSamples(
-                        _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_TX].AudioEffectBytes,
-                        transmitOnRadio);
-                }
+            if (encrypted && (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioEncryptionEffects)))
+            {
+                _effectBuffer.VolumeSampleProvider.Volume = volume;
+                _effectBuffer.AddAudioSamples(
+                    _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.KY_58_TX].AudioEffectBytes,
+                    transmitOnRadio);
+            }
+            else
+            {
+                _effectBuffer.VolumeSampleProvider.Volume = volume;
+                _effectBuffer.AddAudioSamples(
+                    _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_TX].AudioEffectBytes,
+                    transmitOnRadio);
             }
         }
 
 
         public void PlaySoundEffectEndReceive(int transmitOnRadio, float volume)
         {
-            if (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioRxEffects_End))
+            if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioRxEffects_End))
             {
-                var _effectsBuffer = _effectsOutputBuffer[transmitOnRadio];
-
-                _effectsBuffer.VolumeSampleProvider.Volume = volume;
-                _effectsBuffer.AddAudioSamples(
-                    _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_RX].AudioEffectBytes,
-                    transmitOnRadio);
+                return;
             }
+
+            var _effectsBuffer = _effectsOutputBuffer[transmitOnRadio];
+
+            _effectsBuffer.VolumeSampleProvider.Volume = volume;
+            _effectsBuffer.AddAudioSamples(
+                _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_RX].AudioEffectBytes,
+                transmitOnRadio);
         }
 
         public void PlaySoundEffectEndTransmit(int transmitOnRadio, float volume)
         {
-            if (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioTxEffects_End))
+            if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioTxEffects_End))
             {
-                var _effectBuffer = _effectsOutputBuffer[transmitOnRadio];
-
-                _effectBuffer.VolumeSampleProvider.Volume = volume;
-                _effectBuffer.AddAudioSamples(
-                    _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_RX].AudioEffectBytes,
-                    transmitOnRadio);
+                return;
             }
+
+            var _effectBuffer = _effectsOutputBuffer[transmitOnRadio];
+
+            _effectBuffer.VolumeSampleProvider.Volume = volume;
+            _effectBuffer.AddAudioSamples(
+                _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.RADIO_RX].AudioEffectBytes,
+                transmitOnRadio);
         }
 
         private int _errorCount = 0;
@@ -427,7 +433,6 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
             // _stopwatch.Restart();
 
             short[] pcmShort = null;
-
 
             if ((e.BytesRecorded/2 == SEGMENT_FRAMES) && (_micInputQueue.Count == 0))
             {
@@ -486,7 +491,6 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
                         //determine peak
                         if (pcmShort[i] > max)
                         {
-
                             max = pcmShort[i];
                         }
                     }
@@ -541,7 +545,6 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
 
         public void StopEncoding()
         {
-
             _waveIn?.StopRecording();
             _waveIn?.Dispose();
             _waveIn = null;
@@ -613,16 +616,18 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
             ClientAudioProvider clientAudio = null;
             _clientsBufferedAudio.TryRemove(srClient.ClientGuid, out clientAudio);
 
-            if (clientAudio != null)
+            if (clientAudio == null)
             {
-                try
-                {
-                    _clientAudioMixer.RemoveMixerInput(clientAudio.SampleProvider);
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex, "Error removing client input");
-                }
+                return;
+            }
+
+            try
+            {
+                _clientAudioMixer.RemoveMixerInput(clientAudio.SampleProvider);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "Error removing client input");
             }
         }
     }
