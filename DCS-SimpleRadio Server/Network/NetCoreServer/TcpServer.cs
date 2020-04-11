@@ -136,6 +136,9 @@ namespace NetCoreServer
             // Create a new acceptor socket
             _acceptorSocket = new Socket(Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
+            // Update the acceptor socket disposed flag
+            IsSocketDisposed = false;
+
             // Apply the option: reuse address
             _acceptorSocket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, OptionReuseAddress);
             // Apply the option: exclusive address use
@@ -187,6 +190,9 @@ namespace NetCoreServer
 
             // Dispose the acceptor socket
             _acceptorSocket.Dispose();
+
+            // Update the acceptor socket disposed flag
+            IsSocketDisposed = true;
 
             // Disconnect all sessions
             DisconnectAll();
@@ -371,6 +377,7 @@ namespace NetCoreServer
 
         #endregion
 
+
         /// <summary>
         /// Multicast data to all connected clients
         /// </summary>
@@ -396,6 +403,7 @@ namespace NetCoreServer
 
             return true;
         }
+
 
         #region Server handlers
 
@@ -453,8 +461,15 @@ namespace NetCoreServer
 
         #region IDisposable implementation
 
-        // Disposed flag.
-        private bool _disposed;
+        /// <summary>
+        /// Disposed flag
+        /// </summary>
+        public bool IsDisposed { get; private set; }
+
+        /// <summary>
+        /// Acceptor socket disposed flag
+        /// </summary>
+        public bool IsSocketDisposed { get; private set; } = true;
 
         // Implement IDisposable.
         public void Dispose()
@@ -477,7 +492,7 @@ namespace NetCoreServer
             // refer to reference type fields because those objects may
             // have already been finalized."
 
-            if (!_disposed)
+            if (!IsDisposed)
             {
                 if (disposingManagedResources)
                 {
@@ -490,7 +505,7 @@ namespace NetCoreServer
                 // Set large fields to null here...
 
                 // Mark as disposed.
-                _disposed = true;
+                IsDisposed = true;
             }
         }
 

@@ -142,7 +142,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
                             if (ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.LOTATC_EXPORT_ENABLED)
                                 .BoolValue)
                             {
-                                var host = new IPEndPoint(IPAddress.Loopback,
+                                var host = new IPEndPoint(IPAddress.Parse(ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.LOTATC_EXPORT_IP).StringValue),
                                     ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.LOTATC_EXPORT_PORT).IntValue);
 
                                 ClientListExport data = new ClientListExport { ServerVersion = UpdaterChecker.VERSION, Clients = new List<SRClient>()};
@@ -284,8 +284,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
             {
                 try
                 {
-                    client.ClientSocket.Shutdown(SocketShutdown.Both);
-                    client.ClientSocket.Close();
+                    ((SRSClientSession)client.ClientSession).Disconnect();
                 }
                 catch (Exception e)
                 {
@@ -298,7 +297,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
         {
             try
             {
-                var remoteIpEndPoint = client.ClientSocket.RemoteEndPoint as IPEndPoint;
+                var remoteIpEndPoint = ((SRSClientSession)client.ClientSession).Socket.RemoteEndPoint as IPEndPoint;
 
                 _bannedIps.Add(remoteIpEndPoint.Address);
 

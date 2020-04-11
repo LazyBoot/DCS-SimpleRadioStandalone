@@ -72,7 +72,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
 
         public void ConnectExternalAWACSMode(string password, ExternalAWACSModeConnectCallback callback)
         {
-            if (_clientStateSingleton.InExternalAWACSMode)
+            if (_clientStateSingleton.ExternalAWACSModelSelected)
             {
                 return;
             }
@@ -97,7 +97,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
 
         public void DisconnectExternalAWACSMode()
         {
-            if (!_clientStateSingleton.InExternalAWACSMode || _radioDCSSync == null)
+            if (!_clientStateSingleton.ExternalAWACSModelSelected || _radioDCSSync == null)
             {
                 return;
             }
@@ -355,7 +355,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
 //                                                        serverMessage.Client.Coalition);
                                         }
 
-                                        if (_clientStateSingleton.InExternalAWACSMode &&
+                                        if (_clientStateSingleton.ExternalAWACSModelSelected &&
                                             !_serverSettings.GetSettingAsBool(Common.Setting.ServerSettingsKeys.EXTERNAL_AWACS_MODE))
                                         {
                                             DisconnectExternalAWACSMode();
@@ -405,7 +405,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
                                         //add server settings
                                         _serverSettings.Decode(serverMessage.ServerSettings);
 
-                                        if (_clientStateSingleton.InExternalAWACSMode &&
+                                        if (_clientStateSingleton.ExternalAWACSModelSelected &&
                                             !_serverSettings.GetSettingAsBool(Common.Setting.ServerSettingsKeys.EXTERNAL_AWACS_MODE))
                                         {
                                             DisconnectExternalAWACSMode();
@@ -421,7 +421,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
                                         _serverSettings.Decode(serverMessage.ServerSettings);
                                         ServerVersion = serverMessage.Version;
 
-                                        if (_clientStateSingleton.InExternalAWACSMode &&
+                                        if (_clientStateSingleton.ExternalAWACSModelSelected &&
                                             !_serverSettings.GetSettingAsBool(Common.Setting.ServerSettingsKeys.EXTERNAL_AWACS_MODE))
                                         {
                                             DisconnectExternalAWACSMode();
@@ -504,6 +504,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
 
             //clear the clients list
             _clients.Clear();
+
+            Disconnect();
         }
 
         private void ShowVersionMistmatchWarning(string serverVersion)
@@ -566,6 +568,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Network
             }
 
             Logger.Error("Disconnecting from server");
+            ClientStateSingleton.Instance.IsConnected = false;
 
             //CallOnMain(false);
         }
