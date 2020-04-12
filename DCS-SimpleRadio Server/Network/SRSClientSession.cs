@@ -10,25 +10,31 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NLog;
+using System.IO;
+using Ciribob.DCS.SimpleRadio.Standalone.Server.Settings;
+using Caliburn.Micro;
+using Ciribob.DCS.SimpleRadio.Standalone.Common.Setting;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 {
     public class SRSClientSession : TcpSession
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         private readonly ConcurrentDictionary<string, SRClient> _clients;
         private readonly HashSet<IPAddress> _bannedIps;
+        private readonly IEventAggregator _eventAggregator;
 
         // Received data string.
         private readonly StringBuilder _receiveBuffer = new StringBuilder();
 
         public string SRSGuid { get; set; }
 
-        public SRSClientSession(ServerSync server, ConcurrentDictionary<string, SRClient> client, HashSet<IPAddress> bannedIps) : base(server)
+        public SRSClientSession(ServerSync server, ConcurrentDictionary<string, SRClient> client, HashSet<IPAddress> bannedIps, IEventAggregator eventAggregator) : base(server)
         {
             _clients = client;
             _bannedIps = bannedIps;
+            _eventAggregator = eventAggregator;
         }
 
         protected override void OnConnected()
@@ -41,6 +47,33 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
                 Logger.Warn("Disconnecting Banned Client -  " + clientIp.Address + " " + clientIp.Port);
                 return;
+            }
+
+            var whiteListFile = Path.Combine(HoggitVpnChecker.GetCurrentDirectory(), @"client-whitelist.txt");
+            var whiteList = File.ReadAllLines(whiteListFile);
+            if (whiteList.Contains(clientIp.Address.ToString()))
+                return;
+
+            switch (HoggitVpnChecker.CheckVpn(clientIp.Address))
+            {
+                case VpnBlockResult.Safe:
+                    File.AppendAllText(whiteListFile, clientIp.Address.ToString() + Environment.NewLine);
+                    break;
+                case VpnBlockResult.Block:
+                    var client = new SRClient { ClientSession = this };
+                    _eventAggregator.PublishOnUIThread(new BanClientMessage(client));
+                    Disconnect();
+                    Logger.Warn("Disconnecting + banning VPN Client -  " + clientIp.Address + " " + clientIp.Port);
+                    break;
+                case VpnBlockResult.Warning:
+                    if (!ServerSettingsStore.Instance.GetGeneralSetting(ServerSettingsKeys.BLOCK_WARN_IPS).BoolValue)
+                        break;
+
+                    Disconnect();
+                    Logger.Warn("Disconnecting possible VPN Client -  " + clientIp.Address + " " + clientIp.Port);
+                    break;
+                case VpnBlockResult.Error:
+                    break;
             }
         }
 
