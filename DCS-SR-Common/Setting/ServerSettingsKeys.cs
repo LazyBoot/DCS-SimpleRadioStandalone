@@ -31,7 +31,8 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Common.Setting
         LOTATC_EXPORT_ENABLED = 20,
         LOTATC_EXPORT_PORT = 21,
         LOTATC_EXPORT_IP = 22,
-        BLOCK_WARN_IPS = 23,
+        UPNP_ENABLED = 23,
+        BLOCK_WARN_IPS = 24
     }
 
     public class DefaultServerSettings
@@ -60,6 +61,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Common.Setting
             { ServerSettingsKeys.LOTATC_EXPORT_ENABLED.ToString(), "false" },
             { ServerSettingsKeys.LOTATC_EXPORT_PORT.ToString(), "10712" },
             { ServerSettingsKeys.LOTATC_EXPORT_IP.ToString(), "127.0.0.1" },
+            { ServerSettingsKeys.UPNP_ENABLED.ToString(), "true" },
             { ServerSettingsKeys.BLOCK_WARN_IPS.ToString(), "true" },
         };
     }
