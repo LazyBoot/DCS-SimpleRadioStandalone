@@ -18,3 +18,11 @@
         public int block { get; set; }
     }
 }
+
+namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
+{
+    public class ReloadBanListMessage
+    {
+
+    }
+}

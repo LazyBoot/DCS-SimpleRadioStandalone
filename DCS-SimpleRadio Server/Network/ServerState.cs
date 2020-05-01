@@ -21,7 +21,7 @@ using LogManager = NLog.LogManager;
 namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 {
     public class ServerState : IHandle<StartServerMessage>, IHandle<StopServerMessage>, IHandle<KickClientMessage>,
-        IHandle<BanClientMessage>
+        IHandle<BanClientMessage>, IHandle<ReloadBanListMessage>
     {
         private static readonly string DEFAULT_CLIENT_EXPORT_FILE = "clients-list.json";
 
@@ -70,6 +70,11 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
             StopServer();
             _eventAggregator.PublishOnUIThread(new ServerStateMessage(false,
                 new List<SRClient>(_connectedClients.Values)));
+        }
+
+        public void Handle(ReloadBanListMessage message)
+        {
+            PopulateBanList();
         }
 
         private void StartExport()

@@ -227,6 +227,11 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.UI.MainWindow
             _windowManager.ShowWindow(_clientAdminViewModel, null, settings);
         }
 
+        public void ReloadBanList()
+        {
+            _eventAggregator.PublishOnBackgroundThread(new ReloadBanListMessage());
+        }
+
         public void RadioSecurityToggle()
         {
             var newSetting = RadioSecurityText != "ON";

@@ -27,10 +27,16 @@
                Content="0" />
         <Button x:Name="ShowClientList"
                 Width="75"
-                Margin="206,18,0,0"
+                Margin="206,05,0,0"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Top"
                 Content="Client Admin" />
+        <Button x:Name="ReloadBanList"
+                Width="75"
+                Margin="206,32,0,0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Content="Reload Ban List" />
         <Button x:Name="RadioSecurityToggle"
                 Width="75"
                 Margin="206,60,0,0"
