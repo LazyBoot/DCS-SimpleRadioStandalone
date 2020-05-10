@@ -20,6 +20,7 @@ using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using NLog;
 using WPFCustomMessageBox;
+using static Ciribob.DCS.SimpleRadio.Standalone.Common.RadioInformation;
 using Application = FragLabs.Audio.Codecs.Opus.Application;
 
 namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
@@ -359,10 +360,18 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
         }
 
 
-        public void PlaySoundEffectStartReceive(int transmitOnRadio, bool encrypted, float volume)
+        public void PlaySoundEffectStartReceive(int transmitOnRadio, bool encrypted, float volume, Modulation modulation)
         {
             if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioRxEffects_Start))
             {
+                return;
+            }
+
+            bool midsTone = _globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.MIDSRadioEffect);
+
+            if (modulation == Modulation.MIDS && midsTone)
+            {
+                //no tone for MIDS
                 return;
             }
 
@@ -384,7 +393,7 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
             }
         }
 
-        public void PlaySoundEffectStartTransmit(int transmitOnRadio, bool encrypted, float volume)
+        public void PlaySoundEffectStartTransmit(int transmitOnRadio, bool encrypted, float volume, Modulation modulation)
         {
             if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioTxEffects_Start))
             {
@@ -393,11 +402,22 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
 
             var _effectBuffer = _effectsOutputBuffer[transmitOnRadio];
 
+            bool midsTone = _globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.MIDSRadioEffect);
+
+
+
             if (encrypted && (_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioEncryptionEffects)))
             {
                 _effectBuffer.VolumeSampleProvider.Volume = volume;
                 _effectBuffer.AddAudioSamples(
                     _cachedAudioEffects[(int) CachedAudioEffect.AudioEffectTypes.KY_58_TX].AudioEffectBytes,
+                    transmitOnRadio);
+            }
+            else if (modulation == Modulation.MIDS && midsTone)
+            {
+                _effectBuffer.VolumeSampleProvider.Volume = volume;
+                _effectBuffer.AddAudioSamples(
+                    _cachedAudioEffects[(int)CachedAudioEffect.AudioEffectTypes.MIDS_TX].AudioEffectBytes,
                     transmitOnRadio);
             }
             else
@@ -410,10 +430,19 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
         }
 
 
-        public void PlaySoundEffectEndReceive(int transmitOnRadio, float volume)
+        public void PlaySoundEffectEndReceive(int transmitOnRadio, float volume, Modulation modulation)
         {
+            
             if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioRxEffects_End))
             {
+                return;
+            }
+
+            bool midsTone = _globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.MIDSRadioEffect);
+
+            if (modulation == Modulation.MIDS && midsTone)
+            {
+                //no tone for MIDS
                 return;
             }
 
@@ -425,10 +454,18 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
                 transmitOnRadio);
         }
 
-        public void PlaySoundEffectEndTransmit(int transmitOnRadio, float volume)
+        public void PlaySoundEffectEndTransmit(int transmitOnRadio, float volume, Modulation modulation)
         {
             if (!_globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.RadioTxEffects_End))
             {
+                return;
+            }
+
+            bool midsTone = _globalSettings.ProfileSettingsStore.GetClientSettingBool(ProfileSettingsKeys.MIDSRadioEffect);
+
+            if (modulation == Modulation.MIDS && midsTone)
+            {
+                //no tone for MIDS
                 return;
             }
 
@@ -559,47 +596,51 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Client.Audio.Managers
             }
         }
 
+        object lockObj = new object();
         public void StopEncoding()
         {
-            _waveIn?.StopRecording();
-            _waveIn?.Dispose();
-            _waveIn = null;
-
-            _waveOut?.Stop();
-            _waveOut?.Dispose();
-            _waveOut = null;
-
-            _micWaveOut?.Stop();
-            _micWaveOut?.Dispose();
-            _micWaveOut = null;
-
-            _volumeSampleProvider = null;
-            _clientAudioMixer?.RemoveAllMixerInputs();
-            _clientAudioMixer = null;
-
-            _clientsBufferedAudio.Clear();
-
-            _encoder?.Dispose();
-            _encoder = null;
-
-            _decoder?.Dispose();
-            _decoder = null;
-
-            if (_udpVoiceHandler != null)
+            lock(lockObj)
             {
-                _udpVoiceHandler.RequestStop();
-                _udpVoiceHandler = null;
+                _waveIn?.StopRecording();
+                _waveIn?.Dispose();
+                _waveIn = null;
+
+                _waveOut?.Stop();
+                _waveOut?.Dispose();
+                _waveOut = null;
+
+                _micWaveOut?.Stop();
+                _micWaveOut?.Dispose();
+                _micWaveOut = null;
+
+                _volumeSampleProvider = null;
+                _clientAudioMixer?.RemoveAllMixerInputs();
+                _clientAudioMixer = null;
+
+                _clientsBufferedAudio.Clear();
+
+                _encoder?.Dispose();
+                _encoder = null;
+
+                _decoder?.Dispose();
+                _decoder = null;
+
+                if (_udpVoiceHandler != null)
+                {
+                    _udpVoiceHandler.RequestStop();
+                    _udpVoiceHandler = null;
+                }
+
+                _speex?.Dispose();
+                _speex = null;
+
+                SpeakerMax = -100;
+                MicMax = -100;
+
+                _effectsOutputBuffer = null;
+
+                MessageHub.Instance.ClearSubscriptions();
             }
-
-            _speex?.Dispose();
-            _speex = null;
-
-            SpeakerMax = -100;
-            MicMax = -100;
-
-            _effectsOutputBuffer = null;
-
-            MessageHub.Instance.ClearSubscriptions();
         }
 
         public void AddClientAudio(ClientAudio audio)

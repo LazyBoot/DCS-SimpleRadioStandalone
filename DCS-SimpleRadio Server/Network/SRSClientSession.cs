@@ -43,10 +43,9 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
             if (_bannedIps.Contains(clientIp.Address))
             {
-                Disconnect();
-
                 Logger.Warn("Disconnecting Banned Client -  " + clientIp.Address + " " + clientIp.Port);
-                return;
+
+                Disconnect();
             }
 
             var whiteListFile = Path.Combine(HoggitVpnChecker.GetCurrentDirectory(), @"client-whitelist.txt");
@@ -79,9 +78,12 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
         protected override void OnSent(long sent, long pending)
         {
-            // Disconnect slow client with 3MB send buffer
-            if (pending > 3e+6)
+            // Disconnect slow client with 50MB send buffer
+            if (pending > 5e+7)
+            {
+                Logger.Error($"Disconnecting - pending is too large");
                 Disconnect();
+            }
         }
 
         protected override void OnDisconnected()
