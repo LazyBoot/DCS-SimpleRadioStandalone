@@ -5,7 +5,7 @@
              xmlns:local="clr-namespace:Ciribob.DCS.SimpleRadio.Standalone.Server.UI"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              Width="330"
-             Height="595"
+             Height="590ov"
              mc:Ignorable="d">
     <Grid Margin="0,0,-6,0">
         <Button x:Name="ServerStartStop"
@@ -274,13 +274,13 @@
             VerticalAlignment="Top"
             Content="{Binding ShowTransmitterNameText}" />
         <Label Width="165"
-            Margin="18,528,0,0"
+            Margin="18,554,0,0"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             Content="Block Warning IPs" />
         <Button x:Name="BlockWarnIpsToggle"
             Width="75"
-            Margin="206,533,0,0"
+            Margin="206,560,0,0"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             Content="{Binding BlockWarnIpsText}" />
