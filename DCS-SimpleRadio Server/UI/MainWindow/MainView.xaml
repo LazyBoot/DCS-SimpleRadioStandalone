@@ -5,7 +5,7 @@
              xmlns:local="clr-namespace:Ciribob.DCS.SimpleRadio.Standalone.Server.UI"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              Width="330"
-             Height="590"
+             Height="620"
              mc:Ignorable="d">
     <ScrollViewer VerticalScrollBarVisibility="Visible"  Margin="0,0,0,0" >
         <StackPanel Orientation="Vertical" Margin="5" >
@@ -79,10 +79,19 @@
                 <Button x:Name="ShowClientList"
                         Width="75"
                         Height="20"
-                        VerticalAlignment="Center"
+                        VerticalAlignment="Top"
                         HorizontalAlignment="Center"
                         Content="Client Admin" Grid.Row="0"
                         Grid.Column="2" />
+                <Button x:Name="ReloadBanList"
+                        Width="75"
+                        Height="20"
+                        Margin="0 0 0 5"
+                        VerticalAlignment="Bottom"
+                        HorizontalAlignment="Center"
+                        Content="Reload Ban List"
+                        Grid.Row="0"
+                        Grid.Column="2"/>
 
                 <Label
                     HorizontalAlignment="Left"
@@ -413,16 +422,20 @@
 
 
                 </StackPanel>
-                <Label Width="165"
-                    Margin="18,554,0,0"
+                <Label 
+                    Grid.Row="20"
+                    Grid.Column="0" 
+                    Grid.ColumnSpan="2"
                     HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
+                    VerticalAlignment="Center"
                     Content="Block Warning IPs" />
                 <Button x:Name="BlockWarnIpsToggle"
                     Width="75"
-                    Margin="206,560,0,0"
-                    HorizontalAlignment="Left"
-                    VerticalAlignment="Top"
+                    Height="20"
+                    Grid.Row="120"
+                    Grid.Column="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
                     Content="{Binding BlockWarnIpsText}" />
 
             </Grid>
