@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Security.AccessControl;
 using System.Security.Principal;
@@ -89,7 +90,7 @@ namespace Installer
                     "Please Extract Installation zip",
                     MessageBoxButton.OK, MessageBoxImage.Error);
 
-                Logger.Warn("DCS is Running - Installer quit");
+                Logger.Warn("Files missing from Installation Directory");
 
                 Environment.Exit(0);
 
@@ -203,6 +204,7 @@ namespace Installer
         private bool CheckExtracted()
         {
             return File.Exists(_currentDirectory + "\\opus.dll") 
+                   && File.Exists(_currentDirectory + "\\speexdsp.dll")
                    && File.Exists(_currentDirectory + "\\awacs-radios.json")
                    && File.Exists(_currentDirectory + "\\SR-ClientRadio.exe")&& File.Exists(_currentDirectory + "\\Scripts\\DCS-SRS\\Scripts\\DCS-SimpleRadioStandalone.lua");
         }
@@ -524,6 +526,7 @@ namespace Installer
                 DeleteFileIfExists(programPath + "\\awacs-radios.json");
                 DeleteFileIfExists(programPath + "\\SRS-AutoUpdater.exe");
                 DeleteFileIfExists(programPath + "\\SR-Server.exe");
+                DeleteFileIfExists(programPath + "\\DCS-SR-ExternalAudio.exe");
                 DeleteFileIfExists(programPath + "\\DCS-SimpleRadioStandalone.lua");
                 DeleteFileIfExists(programPath + "\\DCS-SRSGameGUI.lua");
                 DeleteFileIfExists(programPath + "\\DCS-SRS-AutoConnectGameGUI.lua");
@@ -561,6 +564,7 @@ namespace Installer
             if (Directory.Exists(programPath) && File.Exists(programPath + "\\SR-ClientRadio.exe"))
             {
                 DeleteFileIfExists(programPath + "\\SR-ClientRadio.exe");
+                DeleteFileIfExists(programPath + "\\DCS-SR-ExternalAudio.exe");
                 DeleteFileIfExists(programPath + "\\opus.dll");
                 DeleteFileIfExists(programPath + "\\speexdsp.dll");
                 DeleteFileIfExists(programPath + "\\awacs-radios.json");
@@ -636,6 +640,7 @@ namespace Installer
             if (Directory.Exists(programPath) && File.Exists(programPath + "\\SR-ClientRadio.exe"))
             {
                 DeleteFileIfExists(programPath + "\\SR-ClientRadio.exe");
+                DeleteFileIfExists(programPath + "\\DCS-SR-ExternalAudio.exe");
                 DeleteFileIfExists(programPath + "\\opus.dll");
                 DeleteFileIfExists(programPath + "\\speexdsp.dll");
                 DeleteFileIfExists(programPath + "\\awacs-radios.json");
@@ -853,8 +858,17 @@ namespace Installer
                     var config = directory + "\\config\\options.lua";
                     if (File.Exists(network) || File.Exists(config))
                     {
-                        Logger.Info($"Found DCS Saved Games Path {directory}");
-                        paths.Add(directory);
+                        var split = directory.Split(Path.DirectorySeparatorChar);
+                        if (!split.Last().ToUpper().Contains("SERVER") && !split.Last().ToUpper().Contains("DEDICATED"))
+                        {
+                            Logger.Info($"Found DCS Saved Games Path {directory}");
+                            paths.Add(directory);
+                        }
+                        else
+                        {
+                            Logger.Info($"Found DCS Saved Games Path {directory} - Ignoring as its a Server path");
+                        }
+                        
                     }
                 }
                
@@ -905,6 +919,7 @@ namespace Installer
             File.Copy(_currentDirectory + "\\SR-ClientRadio.exe", path + "\\SR-ClientRadio.exe", true);
             File.Copy(_currentDirectory + "\\SR-Server.exe", path + "\\SR-Server.exe", true);
             File.Copy(_currentDirectory + "\\SRS-AutoUpdater.exe", path + "\\SRS-AutoUpdater.exe", true);
+            File.Copy(_currentDirectory + "\\DCS-SR-ExternalAudio.exe", path + "\\DCS-SR-ExternalAudio.exe", true);
 
             Logger.Info($"Copying directories");
             DirectoryCopy(_currentDirectory+"\\AudioEffects", path+"\\AudioEffects");
@@ -1003,6 +1018,7 @@ namespace Installer
             {
                 File.Copy(_currentDirectory + "\\Scripts\\Hooks\\DCS-SRS-hook.lua", path + "\\Scripts\\Hooks\\DCS-SRS-hook.lua",
                     true);
+
                 DirectoryCopy(_currentDirectory + "\\Scripts\\DCS-SRS",path+"\\Mods\\Services\\DCS-SRS");
             }
             catch (FileNotFoundException ex)
