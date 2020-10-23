@@ -50,8 +50,11 @@ namespace Ciribob.DCS.SimpleRadio.Standalone.Server.Network
 
             var whiteListFile = Path.Combine(HoggitVpnChecker.GetCurrentDirectory(), @"client-whitelist.txt");
             var whiteList = File.ReadAllLines(whiteListFile);
-            if (whiteList.Contains(clientIp.Address.ToString()))
+            // if (whiteList.Contains(clientIp.Address.ToString()))
+            if (whiteList.Any(wl => clientIp.Address.ToString().StartsWith(wl)))
+            {
                 return;
+            }
 
             switch (HoggitVpnChecker.CheckVpn(clientIp.Address))
             {
